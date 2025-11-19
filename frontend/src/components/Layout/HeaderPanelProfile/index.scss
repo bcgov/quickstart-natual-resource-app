@@ -1,0 +1,82 @@
+@use '../../../styles/variables' as vars;
+@use '@carbon/react/scss/spacing' as *;
+@use '@carbon/react/scss/type' as *;
+@use '@carbon/react/scss/breakpoint' as *;
+@use '@carbon/react/scss/theme' as *;
+@use "@carbon/type/scss/font-family.scss";
+@use '@carbon/type';
+
+.my-profile-container {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  .user-info-section {
+    padding: 1rem;
+    display: flex;
+
+    .user-data {
+      margin-left: 2rem;
+    }
+
+    .user-image {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+  
+  .user-name {
+    @include font-weight(semibold);
+  }
+
+  .divisory {
+    border: 1px solid var(--#{vars.$bcgov-prefix}-border-subtle-01);
+  }
+
+  .account-nav {
+    padding: 0.75rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+
+    ul {
+      display: flex;
+      flex-direction: column;
+      flex-grow: 1;
+
+      li.district-panel {
+        flex-grow: 1;
+      }
+    }
+
+    a {
+      width: 100%;
+      @include font-weight(semibold);
+    }
+
+    .panel-section,
+    .panel-section-light {
+      height: 3rem;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      padding: 0.94rem 1rem;
+      background: var(--#{vars.$bcgov-prefix}-background-left-panel);
+    }
+
+    .panel-section-light {
+      background: var(--#{vars.$bcgov-prefix}-layer-02);
+    }
+
+    .panel-section > span,
+    .panel-section-light > span {
+      @include type.type-style('label-01');
+      color: var(--#{vars.$bcgov-prefix}-text-secondary);
+      user-select: none;
+    }
+  }
+
+  .cursor-pointer {
+    cursor: pointer;
+  }
+}

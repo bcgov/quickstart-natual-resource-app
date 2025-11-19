@@ -1,0 +1,63 @@
+name: Reusable Unit Tests and Analysis
+
+on:
+  workflow_call:
+
+permissions: {}
+
+jobs:
+  tests-frontend:
+    name: Frontend Unit Tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    permissions:
+      contents: write
+      checks: write
+    runs-on: ubuntu-24.04
+    env:
+      VITE_APP_NAME: Waste Plus
+      VITE_FEATURES_OFFLINE: true
+      VITE_ZONE: TEST
+      VITE_USER_POOLS_ID: ${{ secrets.COGNITO_USER_POOL }}
+      VITE_USER_POOLS_WEB_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+      VITE_LEGACY_BASE_URL: https://apps.nrs.gov.bc.ca/ext/waste-for
+      VITE_CLIENT_BASE_URL: https://forestclient.nrs.gov.bc.ca
+      VITE_BACKEND_URL: http://localhost:8080
+      VITE_NODE_ENV: test
+      VITE_COVERAGE: true
+      VITE_PORT: 3000
+    steps:
+      - uses: bcgov/action-test-and-analyse@51b50be3bb2522e480ed8eab72735612deff7f15 # v1.4.0
+        id: tests
+        env:
+          VITE_APP_NAME: Waste Plus
+          VITE_FEATURES_OFFLINE: true
+          VITE_ZONE: TEST
+          VITE_USER_POOLS_ID: ${{ secrets.COGNITO_USER_POOL }}
+          VITE_USER_POOLS_WEB_CLIENT_ID: ${{ secrets.COGNITO_CLIENT_ID }}
+          VITE_BACKEND_URL: http://localhost:8080
+          VITE_NODE_ENV: test
+          VITE_COVERAGE: true
+          VITE_PORT: 3000
+        with:
+          node_version: 22
+          commands: |
+            npm i
+            npm run test:coverage
+          dir: frontend
+          sonar_args: >
+            -Dsonar.exclusions=**/coverage/**,**/test-results/**,**/test-reports/**,**/node_modules/**,**/stub/**,**/reports/**,**/tests/**,**/*.test.{ts,tsx},**/vite-env.d.ts,**/types/**,**/*types.{ts,tsx},**/constants.{ts,tsx},**/config/fam/*,**/config/react-query/*,**/config/tests/*,**/*.env.ts,**/*.scss,**/*.css,**/*.d.ts,**/types.ts,**/*.types.ts,**/main.tsx,**/App.tsx
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.organization=bcgov-sonarcloud
+            -Dsonar.projectKey=nr-app-name-frontend
+          sonar_token: ${{ secrets.SONAR_TOKEN_FRONTEND }}
+          triggers: ('frontend/')
+
+      - name: Annotate PR with frontend test results
+        if: steps.tests.outputs.triggered == 'true'
+        uses: dorny/test-reporter@v2
+        with:
+          name: Frontend Unit Tests
+          path: frontend/coverage/junit-report.xml
+          reporter: java-junit
+          only-summary: false
+          fail-on-error: true

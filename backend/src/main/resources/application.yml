@@ -1,0 +1,233 @@
+# General application
+server:
+  error:
+    include-message: always
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+  max-http-request-header-size: 16KB
+
+spring:
+  application:
+    name: nr-app-name-backend
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          jwk-set-uri: https://cognito-idp.${COGNITO_REGION:region}.amazonaws.com/${COGNITO_USER_POOL:usrpool}/.well-known/jwks.json
+          issuer-uri: https://cognito-idp.${COGNITO_REGION:region}.amazonaws.com/${COGNITO_USER_POOL:usrpool}
+  datasource:
+    jdbcUrl: jdbc:postgresql://${POSTGRES_HOST:localhost}:5432/${POSTGRES_DATABASE:nr-hrs}
+    url: ${spring.datasource.jdbcUrl}
+    username: ${POSTGRES_USER:nr-hrs}
+    password: ${POSTGRES_PASSWORD:default}
+    hikari:
+      driver-class-name: org.postgresql.Driver
+      jdbcUrl: ${spring.datasource.jdbcUrl}
+      username: ${spring.datasource.username}
+      password: ${spring.datasource.password}
+      connectionTimeout: 30000 # 30 seconds
+      idleTimeout: 60000 # 1 minute
+      maxLifetime: 180000 # 3 minutes
+      keepaliveTime: 60000 # 1 minute
+      poolName: HrsPostgresConnPool
+      minimumIdle: 1
+      maximumPoolSize: 3
+      leakDetectionThreshold: 60000
+      connection-test-query: SELECT 1
+  flyway:
+    schemas: hrs
+    default-schema: hrs
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        boot.allow_jdbc_metadata_access: false
+  mvc:
+    problemdetails:
+      enabled: true
+  http:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  sleuth:
+    propagation-keys:
+      - X-TRACE-ID
+      - X-USER
+    baggage-keys:
+      - X-TRACE-ID
+      - X-USER
+    log:
+      slf4j:
+        whitelisted-mdc-keys:
+          - X-TRACE-ID
+          - X-USER
+  jackson:
+    serialization:
+      FAIL_ON_EMPTY_BEANS: false
+
+# Actuator and ops
+management:
+  enable-native-support: true
+  endpoint:
+    metrics:
+      enabled: false
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  endpoints:
+    web:
+      path-mapping:
+        prometheus: metrics
+      base-path: /
+      exposure:
+        include: health,info,metrics,otlp,tracing,httptrace,prometheus
+  httpexchanges:
+    recording:
+      include: principal,request-headers,response-headers,cookie-headers,time-taken,authorization-header,remote-address,session-id
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  observations:
+    annotations:
+      enabled: true
+    key-values:
+      zone: ${APP_ZONE:local}
+      name: ${spring.application.name}
+  tracing:
+    enabled: true
+    propagation:
+      type: B3
+    sampling:
+      probability: 0.7
+    baggage:
+      enabled: true
+      correlation:
+        enabled: true
+        fields:
+          - X-B3-TraceId
+          - X-B3-SpanId
+        remote-fields:
+          - X-B3-TraceId
+          - X-B3-SpanId
+  otlp:
+    metrics:
+      export:
+        enabled: false
+    tracing:
+      export:
+        enabled: false
+    logging:
+      export:
+        enabled: false
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      breaker:
+        sliding-window-type: COUNT_BASED
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 10s
+        permitted-number-of-calls-in-half-open-state: 2
+        automatic-transition-from-open-to-half-open-enabled: true
+  retry:
+    instances:
+      apiRetry:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
+        retry-exceptions:
+          - ca.bc.gov.nrs.hrs.exception.RetriableException
+          - org.springframework.web.client.HttpServerErrorException
+          - ca.bc.gov.nrs.hrs.exception.TooManyRequestsException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException
+          - ca.bc.gov.nrs.hrs.exception.ForestClientNotFoundException
+          - ca.bc.gov.nrs.hrs.exception.UnretriableException
+
+# Certificate for the Database
+ca:
+  bc:
+    gov:
+      nrs:
+        self-uri: ${SELF_URI:http://localhost:8080}
+        legacy-api:
+          address: ${LEGACY_URL:http://127.0.0.1:9090}
+        frontend:
+          url: ${FRONTEND_URL:http://localhost:3000}
+          cors:
+            headers:
+              - x-requested-with
+              - X-REQUESTED-WITH
+              - authorization
+              - Authorization
+              - Content-Type
+              - content-type
+              - credential
+              - CREDENTIAL
+              - X-XSRF-TOKEN
+              - access-control-allow-origin
+              - Access-Control-Allow-Origin
+              - DNT
+              - Keep-Alive,
+              - User-Agent,
+              - X-Requested-With,
+              - If-Modified-Since,
+              - Cache-Control,
+              - Content-Range,
+              - Range
+              - Location
+              - location
+              - X-B3-TraceId
+              - x-b3-traceid
+              - X-B3-TRACEID
+              - X-B3-SpanId
+              - x-b3-spanid
+              - X-B3-SPANID
+            methods:
+              - OPTIONS
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            age: 5m
+
+info:
+  app:
+    name: ${spring.application.name}
+    zone: ${APP_ZONE:local}
+    version: ${APP_VERSION:0.0.1-SNAPSHOT}
+# Logging
+logging:
+  level:
+    ca.bc.gov.nrs.waste: ${LOGGING_LEVEL:INFO}
+  pattern:
+    correlation: "[${spring.application.name:},%X{${X-B3-TraceId:traceId}:-},%X{${X-B3-SpanId:spanId}:-}] "
+
+# Profile Specific Properties
+---
+spring:
+  config:
+    activate:
+      on-profile: container
+  sleuth:
+    propagation-keys:
+      - X-TRACE-ID
+      - X-USER
+    baggage-keys:
+      - X-TRACE-ID
+      - X-USER
+    log:
+      slf4j:
+        whitelisted-mdc-keys:
+          - X-TRACE-ID
+          - X-USER
+
+logging:
+  pattern:
+    console: '{"time": "%d{${LOG_DATEFORMAT_PATTERN:yyyy-MM-dd HH:mm:ss.SSS}}", "level": "${LOG_LEVEL:%5p}", "app":"${spring.application.name:-}", "traceId":"%X{${X-B3-TraceId:traceId}:-}", "spanId":"%X{${X-B3-SpanId:spanId}:-}", "pid": "${PID: }", "thread": "%t", "source": "%logger{63}:%L", "message": "%m", "exception":"${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"}%n'

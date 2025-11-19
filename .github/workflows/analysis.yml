@@ -1,0 +1,76 @@
+name: Analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review, converted_to_draft]
+  schedule:
+    - cron: "0 11 * * 0" # 3 AM PST = 12 PM UDT, runs sundays
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  tests-java:
+    name: Backend Tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    permissions:
+      pull-requests: write
+    secrets: inherit
+    uses: ./.github/workflows/reusable-tests-be.yml
+
+  tests-frontend:
+    name: Frontend Unit Tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    secrets: inherit
+    permissions:
+      contents: write
+      checks: write
+    uses: ./.github/workflows/reusable-tests-fe.yml
+
+  tests-frontend-ex:
+    name: Frontend UI Tests
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    secrets: inherit
+    permissions:
+      contents: write
+      checks: write
+    uses: ./.github/workflows/reusable-tests-fe-extra.yml
+
+  trivy:
+    name: Repository Report
+    if: github.event_name != 'pull_request' || !github.event.pull_request.draft
+    permissions:
+      security-events: write
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run Trivy vulnerability scanner in repo mode
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # 0.33.1
+        with:
+          format: "sarif"
+          output: "trivy-results.sarif"
+          ignore-unfixed: true
+          scan-type: "fs"
+          scanners: "vuln,secret,config"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy scan results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: "trivy-results.sarif"
+
+  results:
+    name: Analysis Results
+    if: always()
+    needs: [tests-java, tests-frontend, tests-frontend-ex, trivy] # Restore trivy when/if fixed
+    runs-on: ubuntu-24.04
+    steps:
+      - if: contains(needs.*.result, 'failure')||contains(needs.*.result, 'canceled')
+        run: echo "At least one job has failed." && exit 1
+      - run: echo "Success!"

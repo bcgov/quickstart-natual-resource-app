@@ -1,0 +1,19 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: nr-app-name
+  title: nr-app-name
+  description: Natural Resources - App Name
+  annotations:
+    github.com/project-slug: bcgov/nr-app-name
+    backstage.io/techdocs-ref: dir:.
+    bcgovpubcode.gov.bc.ca/ministry: WLRS
+    bcgovpubcode.gov.bc.ca/product_name: App Name
+    bcgovpubcode.gov.bc.ca/product_description: Natural Resources - App Name
+    bcgovpubcode.gov.bc.ca/product_owner: PO Name
+    bcgovpubcode.gov.bc.ca/hosting_platform: OpenShift private cloud
+    backstage.io/source-template: template:default/quickstart-openshift
+spec:
+  type: website
+  lifecycle: experimental
+  owner: group:default/team-name
