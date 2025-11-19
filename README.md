@@ -13,7 +13,7 @@ The backend app, connects to postgres database and provides RESTful APIs for the
 
 ## Legacy
 
-The legacy application is built using Java and Spring Boot 2. It connects to the older Oracle database and provides APIs for accessing legacy data. This application is usually not exposed directly to the frontend, but is accessed through the backend application.
+The legacy application is built using Java and Spring Boot 3. It connects to the older Oracle database and provides APIs for accessing legacy data. This application is usually not exposed directly to the frontend, but is accessed through the backend application.
 
 ## LegacyDB
 
