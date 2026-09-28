@@ -57,7 +57,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Initializing Deployment
-        uses: bcgov/action-deployer-openshift@d972993c70aba88e4f2fe66a66c4b7149fa9fcad # v4.0.0
+        uses: bcgov/action-deployer-openshift@bb9d143f4f03187239580c17c4b77da04cdb6e66 # v4.2.2
         with:
           file: legacydb/openshift.deploy.yml
           oc_namespace: cffaf3-tools
